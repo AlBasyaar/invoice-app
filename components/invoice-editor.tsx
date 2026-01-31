@@ -166,24 +166,6 @@ export function InvoiceEditor({ invoiceId, isNew }: InvoiceEditorProps) {
                 </SelectContent>
               </Select>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <MoreVertical className="w-5 h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handlePrint}>
-                    <Printer className="w-4 h-4 mr-2" />
-                    Print
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
               <Button onClick={handleSave}>Save</Button>
             </div>
           </div>

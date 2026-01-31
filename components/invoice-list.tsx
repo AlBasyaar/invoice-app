@@ -10,9 +10,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { getInvoiceListItems, deleteInvoice } from '@/lib/invoice-context';
+import { getInvoiceListItems, deleteInvoice, getInvoiceById } from '@/lib/invoice-context';
 import { InvoiceListItem } from '@/lib/invoice-types';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download } from 'lucide-react';
+import { generatePDF, printInvoice } from '@/lib/pdf-generator';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { toast } from '@/hooks/use-toast';
 import Swal from 'sweetalert2';
@@ -42,6 +43,26 @@ export function InvoiceList() {
       const items = getInvoiceListItems();
       setInvoices(items);
       await Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1500, showConfirmButton: false });
+    }
+  };
+
+  const handleExportInvoice = async (id: string) => {
+    const invoice = getInvoiceById(id);
+    if (!invoice) {
+      await Swal.fire({ icon: 'error', title: 'Not found', text: 'Invoice not found' });
+      return;
+    }
+
+    try {
+      // Open a print-friendly window so users can use the browser's "Save as PDF" (matches print preview)
+      Swal.fire({ title: 'Preparing document...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      printInvoice(invoice);
+      Swal.close();
+      await Swal.fire({ icon: 'success', title: 'Print dialog opened', timer: 1200, showConfirmButton: false });
+    } catch (e) {
+      console.error(e);
+      Swal.close();
+      await Swal.fire({ icon: 'error', title: 'Export failed', text: String(e) });
     }
   }; 
 
@@ -138,6 +159,9 @@ export function InvoiceList() {
                               <Edit2 className="w-4 h-4" />
                             </Button>
                           </Link>
+                          <Button variant="ghost" size="icon" onClick={() => handleExportInvoice(invoice.id)} aria-label="Export" title="Export JSON">
+                            <Download className="w-4 h-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleDeleteInvoice(invoice.id)} aria-label="Delete" className="text-destructive">
                             <Trash2 className="w-4 h-4" />
                           </Button>
