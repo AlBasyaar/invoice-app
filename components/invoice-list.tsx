@@ -93,7 +93,7 @@ export function InvoiceList() {
                 invoices.map((invoice) => (
                   <tr
                     key={invoice.id}
-                    className="border-b border-border hover:bg-secondary/50 transition-colors"
+                    className="border-b border-border"
                   >
                     <td className="px-6 py-4 text-foreground">
                       <Link href={`/invoice/${invoice.id}`} className="hover:underline">

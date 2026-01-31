@@ -4,21 +4,106 @@ export async function generatePDF(invoice: Invoice) {
   // Dynamically import html2pdf to avoid SSR issues
   const html2pdf = (await import('html2pdf.js')).default;
 
-  const element = document.createElement('div');
-  element.innerHTML = generateInvoiceHTML(invoice);
+  // Create an isolated iframe and write the invoice HTML into it so that
+  // global styles (including those using unsupported color functions)
+  // are not applied/parsed by html2canvas.
+  const iframe = document.createElement('iframe');
+  // place iframe off-screen but visible with opacity 0 so html2canvas can render it
+  iframe.style.position = 'fixed';
+  iframe.style.left = '-9999px';
+  iframe.style.top = '0';
+  iframe.style.width = '800px';
+  iframe.style.height = '1120px';
+  iframe.style.border = '0';
+  iframe.style.opacity = '0';
+  iframe.style.pointerEvents = 'none';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument;
+  if (!doc) {
+    document.body.removeChild(iframe);
+    throw new Error('Unable to create iframe document');
+  }
+
+  doc.open();
+  doc.write(generateInvoiceHTML(invoice));
+  doc.close();
+
+  const element = doc.body;
+
+  // Wait for images in the iframe to load (or timeout after 3s)
+  await new Promise<void>((resolve) => {
+    const imgs = Array.from(doc.images) as HTMLImageElement[];
+    if (imgs.length === 0) return resolve();
+    let loaded = 0;
+    const check = () => {
+      loaded++;
+      if (loaded === imgs.length) resolve();
+    };
+    imgs.forEach((img) => {
+      if (img.complete) return check();
+      img.addEventListener('load', check);
+      img.addEventListener('error', check);
+    });
+    // timeout fallback
+    setTimeout(resolve, 3000);
+  });
 
   const options = {
     margin: 10,
     filename: `invoice-${invoice.invoiceNumber}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
+    html2canvas: {
+      scale: 2,
+      // onclone allows us to sanitize styles on the cloned document before html2canvas parses them
+      onclone: (clonedDoc: Document) => {
+        try {
+          const win = clonedDoc.defaultView;
+          if (!win) return;
+          const all = Array.from(clonedDoc.getElementsByTagName('*')) as Element[];
+          for (const el of all) {
+            try {
+              const cs = win.getComputedStyle(el);
+              // properties to check
+              const props = ['background-color', 'color', 'border-color', 'outline-color'];
+              for (const prop of props) {
+                const val = cs.getPropertyValue(prop);
+                if (val && (val.includes('oklab') || val.includes('color-mix'))) {
+                  // Use safe fallbacks: white background, dark text, neutral border
+                  if (prop === 'background-color') {
+                    (el as HTMLElement).style.setProperty(prop, '#ffffff');
+                  } else if (prop === 'color') {
+                    (el as HTMLElement).style.setProperty(prop, '#111111');
+                  } else {
+                    (el as HTMLElement).style.setProperty(prop, '#e5e7eb');
+                  }
+                }
+              }
+            } catch (e) {
+              // ignore per-element errors
+            }
+          }
+        } catch (e) {
+          // ignore onclone errors
+        }
+      },
+    },
     jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
   };
 
-  html2pdf().set(options).from(element).save();
+  try {
+    await html2pdf().set(options).from(element).save();
+  } finally {
+    // Clean up iframe
+    try {
+      document.body.removeChild(iframe);
+    } catch (e) {
+      // ignore
+    }
+  }
 }
 
-function generateInvoiceHTML(invoice: Invoice): string {
+export function generateInvoiceHTML(invoice: Invoice): string {
   const total = invoice.items.reduce(
     (sum, item) => sum + item.quantity * item.unitPrice,
     0
@@ -61,37 +146,41 @@ function generateInvoiceHTML(invoice: Invoice): string {
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: Arial, sans-serif; color: #1a202c; }
-        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 32px; border-bottom: 1px solid #e5e7eb; }
-        .company-info { display: flex; gap: 16px; }
-        .logo { width: 96px; height: 96px; background-color: #5b21b6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 24px; flex-shrink: 0; }
-        .company-details h1 { margin: 0; font-size: 24px; font-weight: bold; }
-        .company-details p { margin: 4px 0; font-size: 14px; color: #6b7280; }
+        body { font-family: Arial, sans-serif; color: #1a202c; background: #f7f7f7; }
+        .container { width: 794px; margin: 24px auto; background: #ffffff; padding: 32px; border: 1px solid #e5e7eb; border-radius: 8px; box-sizing: border-box; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb; }
+        .company-info { display: flex; gap: 16px; align-items: center; }
+        .logo { width: 72px; height: 72px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; background: #ffffff; }
+        .logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .company-details h1 { margin: 0; font-size: 20px; font-weight: 700; }
+        .company-details p { margin: 4px 0; font-size: 13px; color: #6b7280; }
         .invoice-details { text-align: right; }
-        .invoice-details h2 { margin: 0; font-size: 32px; font-weight: bold; color: #5b21b6; margin-bottom: 8px; }
-        .invoice-details p { margin: 4px 0; font-size: 14px; color: #6b7280; }
-        .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 32px; }
-        .party h3 { margin: 0 0 12px 0; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
-        .party p { margin: 4px 0; font-size: 14px; color: #374151; }
-        .party p.name { font-weight: 600; }
-        .items-table { width: 100%; margin-bottom: 32px; border-collapse: collapse; }
-        .items-table th { text-align: left; padding: 8px; font-weight: 600; color: #1a202c; border-bottom: 2px solid #e5e7eb; }
+        .invoice-details h2 { margin: 0; font-size: 28px; font-weight: 700; color: #5b21b6; margin-bottom: 8px; }
+        .invoice-details p { margin: 4px 0; font-size: 13px; color: #6b7280; }
+        .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 24px; }
+        .party h3 { margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
+        .party p { margin: 4px 0; font-size: 13px; color: #374151; }
+        .party p.name { font-weight: 700; }
+        .items-table { width: 100%; margin-bottom: 24px; border-collapse: collapse; }
+        .items-table th { text-align: left; padding: 12px 8px; font-weight: 700; color: #1a202c; border-bottom: 2px solid #e5e7eb; }
         .items-table th:nth-child(2), .items-table th:nth-child(3), .items-table th:nth-child(4), .items-table th:nth-child(5) { text-align: right; }
-        .totals { display: flex; justify-content: flex-end; margin-bottom: 32px; }
-        .totals-box { width: 256px; }
+        .items-table td { padding: 12px 8px; border-bottom: 1px solid #f1f1f1; font-size: 14px; color: #25303a; }
+        .totals { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+        .totals-box { width: 300px; }
         .totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
-        .totals-row.total { border-bottom: none; padding-top: 12px; font-size: 16px; font-weight: bold; }
-        .footer { padding-top: 32px; border-top: 1px solid #e5e7eb; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .footer-section h3 { margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
-        .footer-section p { margin: 4px 0; font-size: 14px; color: #374151; }
+        .totals-row.total { border-bottom: none; padding-top: 12px; font-size: 16px; font-weight: 700; }
+        .footer { padding-top: 24px; border-top: 1px solid #e5e7eb; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .footer-section h3 { margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
+        .footer-section p { margin: 4px 0; font-size: 13px; color: #374151; }
         .notes { margin-bottom: 16px; }
       </style>
     </head>
     <body>
+      <div class="container">
       <!-- Header -->
       <div class="header">
         <div class="company-info">
-          <div class="logo">S</div>
+          <div class="logo"><img src="https://res.cloudinary.com/dr5pehdsw/image/upload/v1769828376/Logo_Zencool_pmyw1u.jpg" alt="${invoice.from.name} logo" crossorigin="anonymous"/></div>
           <div class="company-details">
             <h1>${invoice.from.name}</h1>
             <p>${invoice.from.address}</p>
@@ -180,4 +269,15 @@ function generateInvoiceHTML(invoice: Invoice): string {
     </body>
     </html>
   `;
+}
+
+export function printInvoice(invoice: Invoice) {
+  // Open a new window and trigger print with the invoice HTML
+  const html = generateInvoiceHTML(invoice);
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+  printWindow.document.open();
+  // Add onload print and close
+  printWindow.document.write(html.replace('<body>', `<body onload="window.print();window.close();">`));
+  printWindow.document.close();
 }

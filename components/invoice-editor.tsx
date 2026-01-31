@@ -24,7 +24,8 @@ import { ArrowLeft, Download, Printer, MoreVertical, Plus, Trash2 } from 'lucide
 import { Invoice, InvoiceItem } from '@/lib/invoice-types';
 import { getInvoiceById, saveInvoice, deleteInvoice, createNewInvoice } from '@/lib/invoice-context';
 import InvoicePreview from './invoice-preview';
-import { generatePDF } from '@/lib/pdf-generator';
+import { generatePDF, printInvoice } from '@/lib/pdf-generator';
+import { toast } from '@/hooks/use-toast';
 
 interface InvoiceEditorProps {
   invoiceId?: string;
@@ -61,16 +62,24 @@ export function InvoiceEditor({ invoiceId, isNew }: InvoiceEditorProps) {
   const handleDelete = () => {
     if (confirm('Are you sure you want to delete this invoice?')) {
       deleteInvoice(invoice.id);
+      toast({ title: 'Invoice deleted' });
       router.push('/');
     }
   };
 
   const handlePrint = () => {
-    window.print();
+    // Use the print helper that opens a print-friendly window
+    printInvoice(invoice);
   };
 
   const handleExportPDF = async () => {
-    await generatePDF(invoice);
+    try {
+      await generatePDF(invoice);
+      toast({ title: 'PDF exported' });
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Failed to export PDF' });
+    }
   };
 
   const updateInvoice = (updates: Partial<Invoice>) => {
@@ -150,10 +159,6 @@ export function InvoiceEditor({ invoiceId, isNew }: InvoiceEditorProps) {
                   <DropdownMenuItem onClick={handlePrint}>
                     <Printer className="w-4 h-4 mr-2" />
                     Print
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportPDF}>
-                    <Download className="w-4 h-4 mr-2" />
-                    Export PDF
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleDelete} className="text-destructive">
                     <Trash2 className="w-4 h-4 mr-2" />
