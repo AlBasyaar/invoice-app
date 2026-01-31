@@ -9,7 +9,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'Invoice App - CV Zen`cool',
-  description: 'Free and simple invoice generator. Create, manage, and print professional invoices with ease.',
+  description: 'Aplikasi invoice modern dari CV Zen`cool untuk membuat, mengelola, dan mencetak invoice profesional dengan mudah.',
   generator: 'v0.app',
   icons: {
     icon: [
