@@ -272,12 +272,49 @@ export function generateInvoiceHTML(invoice: Invoice): string {
 }
 
 export function printInvoice(invoice: Invoice) {
-  // Open a new window and trigger print with the invoice HTML
+  // Open a new window and provide a safer print flow for mobile devices
   const html = generateInvoiceHTML(invoice);
   const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
+  if (!printWindow) {
+    // Popup blocked — inform caller
+    throw new Error('Unable to open print window. Please allow popups and try again.');
+  }
+
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
   printWindow.document.open();
-  // Add onload print and close
-  printWindow.document.write(html.replace('<body>', `<body onload="window.print();window.close();">`));
+
+  if (isMobile) {
+    // On mobile, some browsers block auto print or the print dialog fails when invoked
+    // programmatically. Show a visible button the user can tap to initiate printing
+    // (this guarantees a user gesture and avoids the printing error seen on some devices).
+    const mobileWrapper = `
+      <div style="padding:24px; text-align:center; font-family: Arial, sans-serif;">
+        <p style="margin-bottom:12px; color:#374151">Tap the button below to open the print dialog for this invoice.</p>
+        <button id="print-btn" style="background:#2563eb;color:#fff;border:none;padding:12px 20px;border-radius:8px;font-size:16px;">Cetak</button>
+        <p style="margin-top:12px;color:#6b7280;font-size:12px">If nothing happens, use your browser menu and choose "Print" or "Save as PDF".</p>
+      </div>
+    `;
+
+    // Inject the invoice HTML and a print button script
+    const htmlWithButton = html.replace('<body>', `<body><div id="__mobile-print-cta">${mobileWrapper}</div>`);
+
+    printWindow.document.write(htmlWithButton + `
+      <script>
+        (function(){
+          const btn = document.getElementById('print-btn');
+          if (btn) {
+            btn.addEventListener('click', function() {
+              try { window.print(); } catch (e) { console.error(e); }
+            });
+          }
+        })();
+      <\/script>
+    `);
+  } else {
+    // Desktop: auto-trigger print and close the window after print dialog is opened
+    printWindow.document.write(html.replace('<body>', `<body onload="setTimeout(function(){ window.print(); window.close(); }, 200);">`));
+  }
+
   printWindow.document.close();
 }
