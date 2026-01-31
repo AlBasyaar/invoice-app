@@ -62,7 +62,7 @@ export function getInvoiceListItems(): InvoiceListItem[] {
 export function createNewInvoice(): Invoice {
   return {
     id: Math.random().toString(36).substr(2, 9),
-    invoiceNumber: getNextInvoiceNumber(),
+    invoiceNumber: `${new Date().getFullYear()}-0`,
     status: 'draft',
     issuedDate: new Date().toISOString().split('T')[0],
     dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)

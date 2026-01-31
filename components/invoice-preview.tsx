@@ -23,35 +23,35 @@ export default function InvoicePreview({ invoice }: InvoicePreviewProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-border p-8 text-foreground print:p-0 print:border-0 print:rounded-none">
+    <div className="bg-white rounded-lg border border-border p-6 sm:p-8 text-foreground print:p-0 print:border-0 print:rounded-none">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8 pb-8 border-b border-border">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-8 pb-8 border-b border-border">
+        <div className="flex items-center gap-3">
           {/* Logo */}
           <img
             src="https://res.cloudinary.com/dr5pehdsw/image/upload/v1769828376/Logo_Zencool_pmyw1u.jpg"
             alt={`${invoice.from.name} logo`}
-            className="w-24 h-24 object-cover rounded-lg"
+            className="w-16 h-16 sm:w-24 sm:h-24 object-cover rounded-lg"
           />
           <div>
-            <h1 className="text-2xl font-bold text-foreground">{invoice.from.name}</h1>
-            <p className="text-sm text-muted-foreground">{invoice.from.address}</p>
+            <h1 className="text-lg sm:text-2xl font-bold text-foreground">{invoice.from.name}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">{invoice.from.address}</p>
           </div>
         </div>
-        <div className="text-right">
-          <h2 className="text-3xl font-bold text-primary mb-2">
+        <div className="w-full sm:w-auto text-left sm:text-right mt-4 sm:mt-0">
+          <h2 className="text-xl sm:text-3xl font-bold text-primary mb-2 break-words">
             Invoice {invoice.invoiceNumber}
           </h2>
-          <p className="text-sm text-muted-foreground">Issued at: {formatDate(invoice.issuedDate)}</p>
-          <p className="text-sm text-muted-foreground">Due at: {formatDate(invoice.dueDate)}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Issued at: {formatDate(invoice.issuedDate)}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Due at: {formatDate(invoice.dueDate)}</p>
           {invoice.lateFee > 0 && (
-            <p className="text-sm text-muted-foreground">Late fee: {invoice.lateFee}%</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Late fee: {invoice.lateFee}%</p>
           )}
         </div>
       </div>
 
       {/* Company Info */}
-      <div className="grid grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground mb-3">FROM</h3>
           <div className="text-sm space-y-1">
@@ -79,7 +79,8 @@ export default function InvoicePreview({ invoice }: InvoicePreviewProps) {
       {/* Items Table */}
       <div className="mb-8">
         <h3 className="text-sm font-semibold text-muted-foreground mb-3">ITEMS</h3>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[540px] text-sm">
           <thead>
             <tr className="border-b border-border">
               <th className="text-left py-2 text-foreground font-semibold">Item</th>
@@ -113,6 +114,7 @@ export default function InvoicePreview({ invoice }: InvoicePreviewProps) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Totals */}

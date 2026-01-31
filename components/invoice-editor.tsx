@@ -26,6 +26,8 @@ import { getInvoiceById, saveInvoice, deleteInvoice, createNewInvoice } from '@/
 import InvoicePreview from './invoice-preview';
 import { generatePDF, printInvoice } from '@/lib/pdf-generator';
 import { toast } from '@/hooks/use-toast';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 interface InvoiceEditorProps {
   invoiceId?: string;
@@ -54,15 +56,30 @@ export function InvoiceEditor({ invoiceId, isNew }: InvoiceEditorProps) {
     return <div>Loading...</div>;
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     saveInvoice(invoice);
+    await Swal.fire({
+      icon: 'success',
+      title: 'Saved',
+      text: 'Invoice saved successfully',
+      timer: 1500,
+      showConfirmButton: false,
+    });
     router.push('/');
   };
 
-  const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this invoice?')) {
+  const handleDelete = async () => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This will delete the invoice.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
+    });
+
+    if (result.isConfirmed) {
       deleteInvoice(invoice.id);
-      toast({ title: 'Invoice deleted' });
+      await Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1500, showConfirmButton: false });
       router.push('/');
     }
   };
