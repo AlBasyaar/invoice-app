@@ -8,25 +8,17 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Invoice Generator - Create & Manage Invoices',
+  title: 'Invoice App - CV Zen`cool',
   description: 'Free and simple invoice generator. Create, manage, and print professional invoices with ease.',
   generator: 'v0.app',
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: 'https://res.cloudinary.com/dr5pehdsw/image/upload/v1769835633/Fav-icon_zbpuco.jpg',
+        type: 'image/jpeg',
       },
     ],
-    apple: '/apple-icon.png',
+    apple: 'https://res.cloudinary.com/dr5pehdsw/image/upload/v1769835633/Fav-icon_zbpuco.jpg',
   },
 }
 
